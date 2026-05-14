@@ -1,15 +1,23 @@
-# NLP sentiment pipeline
+# NLP Transformers pipelines
 
-Small example that runs **sentiment analysis** with [Hugging Face Transformers](https://huggingface.co/docs/transformers): each input sentence is labeled `POSITIVE` or `NEGATIVE` with a confidence score.
+Examples that run several [Hugging Face Transformers](https://huggingface.co/docs/transformers) pipelines from one script: sentiment, zero-shot classification, text generation, summarization, and English→French translation. Each section prints model output for fixed demo strings.
 
 ## What it does
 
-`pipeline.py` builds a `pipeline("sentiment-analysis", ...)` using `distilbert-base-uncased-finetuned-sst-2-english`, a DistilBERT model fine-tuned on the [SST-2](https://nlp.stanford.edu/sentiment/) binary sentiment task. It classifies two hard-coded example strings and prints the model output.
+`pipeline.py` runs, in order:
+
+1. **Sentiment** — `distilbert-base-uncased-finetuned-sst-2-english` (DistilBERT on [SST-2](https://nlp.stanford.edu/sentiment/)-style binary labels).
+2. **Zero-shot classification** — `facebook/bart-large-mnli` with candidate labels you supply in code.
+3. **Text generation** — `distilgpt2` with a short continuation budget.
+4. **Summarization** — `sshleifer/distilbart-cnn-12-6` via `AutoModelForSeq2SeqLM.generate` (the built-in `pipeline("summarization", ...)` task is not available in some recent Transformers versions).
+5. **Translation** — `Helsinki-NLP/opus-mt-en-fr` the same way (English to French).
+
+Models are pinned in code so results do not drift when library defaults change.
 
 ## Requirements
 
 - Python 3.8+ recommended
-- [PyTorch](https://pytorch.org/) (or another backend supported by Transformers for this task)
+- [PyTorch](https://pytorch.org/) (or another backend supported by Transformers for these tasks)
 
 Install dependencies:
 
@@ -25,14 +33,14 @@ From the repository root:
 python pipeline.py
 ```
 
-You should see a list of dictionaries, for example each item shaped like `{"label": "POSITIVE", "score": 0.99...}` (exact scores depend on the model and inputs).
+The first run downloads each model you have not cached yet (can be several hundred MB to over 1 GB in total); later runs use the local Hugging Face cache.
 
 ## Customizing
 
-- Change the strings passed to `classifier([...])` to try your own sentences.
-- To use another model, change the `model=` argument to any compatible sentiment checkpoint on the [Hugging Face Hub](https://huggingface.co/models?pipeline_tag=text-classification&sort=trending).
+- Edit the strings and `candidate_labels` in `main()` to try your own inputs.
+- Swap any `model=` argument for another compatible checkpoint on the [Hugging Face Hub](https://huggingface.co/models).
 
 ## Notes
 
-- The first run downloads model weights (several hundred MB); later runs use the local cache.
-- Pinning `model=` in code keeps behavior stable when the library’s default model for `sentiment-analysis` changes.
+- Text generation passes `pad_token_id=50256` (GPT-2 family EOS) so DistilGPT-2 does not warn on open-ended generation.
+- Summarization uses beam search with modest `max_length` / `min_length` so short inputs still get a usable summary.
